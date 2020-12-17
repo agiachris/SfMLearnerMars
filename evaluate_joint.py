@@ -13,7 +13,7 @@ from SfMLearnerMars.losses import ViewSynthesisLoss
 from SfMLearnerMars.utils import (Visualizer, compute_ate)
 
 # experiment settings
-parser = argparse.ArgumentParser(description="Train SfM on CEPT Dataset")
+parser = argparse.ArgumentParser(description="Test SfM on CEPT Dataset")
 parser.add_argument('--exp-name', type=str, required=True, help='experiment name')
 parser.add_argument('--disp-net', type=str, required=True, help='path to pre-trained disparity net weights')
 parser.add_argument('--pose-net', type=str, required=True, help='path to pre-trained pose net weights')

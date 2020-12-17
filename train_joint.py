@@ -87,7 +87,7 @@ def main():
         {'params': disp_net.parameters(), 'lr': args.learning_rate},
         {'params': pose_net.parameters(), 'lr': args.learning_rate}
     ]
-    optim = torch.optim.Adam(optim_params, betas=(args.momentum, args.beta),weight_decay=args.weight_decay)
+    optim = torch.optim.Adam(optim_params, betas=(args.momentum, args.beta), weight_decay=args.weight_decay)
 
     # get sequential dataset
     train_set = CEPTDataset.CEPT(args.dataset_dir, 'train', args.sequence_length, args.seed)
