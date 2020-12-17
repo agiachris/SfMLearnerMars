@@ -72,7 +72,7 @@ class CEPT(Dataset):
         if split == 'train':
             random.shuffle(samples)
 
-        self.samples = samples[:50]
+        self.samples = samples
 
         # align ground truth pose with target frames
         self.gt_pose = None
@@ -147,6 +147,7 @@ class CEPT(Dataset):
                 break
 
         # should be a target frame index for each pose
+        pose = pose[:i+1]
         assert (pose.shape[0] == len(run_samples_idx))
         self.gt_pose = pose
         self.pose_tgt_idx = np.array(run_samples_idx)

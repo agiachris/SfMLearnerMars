@@ -46,7 +46,7 @@ parser.add_argument('--padding-mode', choices=['zeros', 'border'], default='zero
                          ' border will only null gradients of the coordinate outside (x or y)')
 
 # logging
-parser.add_argument('--save-freq', default=1, type=int, help='model checkpoint frequency')
+parser.add_argument('--save-freq', default=2, type=int, help='model checkpoint frequency')
 parser.add_argument('--vis-per-epoch', default=20, type=int, help='visuals per epoch to save')
 
 
@@ -128,7 +128,7 @@ def main():
 
         total_time[epo] = time.time() - start_time
         print_str = "epo - {}/{} | train_loss - {:.3f} | val_loss - {:.3f} | ".format(
-            epo, args.epochs, train_loss[epo, 0],val_loss[epo, 0])
+            epo, args.epochs, train_loss[epo, 0], val_loss[epo, 0])
         print_str += "val_ate - {:.3f} | total_time - {}".format(ate, datetime.timedelta(seconds=total_time[epo]))
         print(print_str)
 
@@ -142,6 +142,15 @@ def main():
         np.savetxt(os.path.join(log_path, 'val_loss.txt'), val_loss)
         np.savetxt(os.path.join(log_path, 'val_ate.txt'), val_ate)
         np.savetxt(os.path.join(log_path, 'time_log.txt'), total_time)
+
+    # generate loss curves
+    visualizer.generate_curve([train_loss[:, 0], val_loss[:, 0]], ['train', 'val'], 'loss',
+                              'Train vs Val Combined Loss', log_path)
+    visualizer.generate_curve([train_loss[:, 1], val_loss[:, 1]], ['train', 'val'], 'photometric loss',
+                              'Train vs Val Photometric Reconstruction Loss', log_path)
+    visualizer.generate_curve([train_loss[:, 2], val_loss[:, 2]], ['train', 'val'], 'depth smooth loss',
+                              'Train vs Val Depth Smoothness Loss', log_path)
+    visualizer.generate_curve([val_ate], ['val'], 'ATE', 'Validation Absolute Trajectory Error', log_path)
 
 
 def train_epoch(disp_net, pose_net, train_loader, criterion, optim, w1, w2):

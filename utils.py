@@ -172,6 +172,7 @@ def compute_ate(gt_pose, pred_pose, tgt_idx):
 
     # get homogenous prediction and ground truth sequences
     homogenous_pred_pose = absolute_from_relative(pred_pose)
+    homogenous_pred_pose = np.linalg.inv(homogenous_pred_pose[0, ...]) @ homogenous_pred_pose
 
     # downsample predicted poses to align with ground truth
     homogenous_pred_pose = homogenous_pred_pose[tgt_idx]
@@ -223,33 +224,72 @@ class Visualizer:
         """
         self.output_dir = output_dir + '/visuals'
         os.mkdir(self.output_dir)
+        self.traj_dir = self.output_dir + '/trajectories'
+        os.mkdir(self.traj_dir)
         self.device = device
 
-    def generate_trajectories(self, pred_traj, gt_traj, epo, split):
+    @staticmethod
+    def generate_curve(data, labels, data_type, title, log_dir):
+        """Generate a metric curve over epochs.
+        """
+        fig = plt.figure()
+        plt.title(title)
+        plt.xlabel("Epoch")
+        plt.ylabel(data_type)
+        n = data[0].shape[0]
+        epochs = np.arange(1, n+1)
+        for i, name in enumerate(labels):
+            plt.plot(epochs, data[i], label=name)
+        plt.legend(loc='best')
+        plt.savefig(log_dir + '/{}_curves.png'.format(data_type))
+        plt.close(fig)
+
+    def generate_trajectories(self, gt_traj, pred_traj, epo, split, overlay=False):
         """Generate visualization of ground truth trajectory and predicted trajectory in bird's
         eye view frame (only x and y) which have been aligned in terms of scale, rotation, and translation. 
         Args:
-            pred_traj: np.array of predicted position trajectory -- [3, N]
             gt_traj: np.array of ground truh position trajectory -- [3, N]
+            pred_traj: np.array of predicted position trajectory -- [3, N]
             epo: current epoch [int]
             split: data split -- ['train', 'val', 'test']
         """
         assert (pred_traj.shape == gt_traj.shape)
-        color = np.arange(gt_traj.shape[0]) / gt_traj.shape[0]
-        cmap_gt = plt.get_cmap('viridis')
-        cmap_pred = plt.get_cmap('plasma')
+        color = np.arange(gt_traj.shape[1]) / gt_traj.shape[1]
 
-        fig = plt.figure()
-        plt.plot(gt_traj[0, :], gt_traj[1, :], cmap=cmap_gt, c=color, label='gt')
-        plt.title("Ground Truth vs Predicted Trajectory in UTM Frame")
-        plt.xlabel("x [m]")
-        plt.ylabel("y [m]")
-        plt.show()
-        plt.plot(pred_traj[0, :], pred_traj[1, :], cmap=cmap_pred, c=color, label='pred')
-        plt.show()
-        plt.legend(loc='best')
-        plt.savefig(self.output_dir + '/epo{}_{}_traj.png'.format(epo, split))
-        plt.close(fig)
+        if overlay:
+            fig = plt.figure()
+            cmap_gt = plt.get_cmap('viridis')
+            cmap_pred = plt.get_cmap('plasma')
+            # overlay ground truth and predicted trajectories
+            plt.scatter(gt_traj[0, :], gt_traj[1, :], cmap=cmap_gt, c=color, label='gt')
+            plt.scatter(pred_traj[0, :], pred_traj[1, :], cmap=cmap_pred, c=color, label='pred')
+            plt.title("Ground Truth vs Predicted Trajectory in UTM Frame")
+            plt.xlabel("x [m]")
+            plt.ylabel("y [m]")
+            plt.legend(loc='best')
+            plt.show()
+            fig.savefig(self.traj_dir + '/epo{}_{}_traj.png'.format(epo, split))
+            plt.close(fig)
+        else:
+            cmap = plt.get_cmap('viridis')
+            # plot ground truth trajectory
+            fig = plt.figure()
+            plt.scatter(gt_traj[0, :], gt_traj[1, :], cmap=cmap, c=color, label='gt')
+            plt.title("Ground Truth Trajectory in UTM Frame")
+            plt.xlabel("x [m]")
+            plt.ylabel("y [m]")
+            plt.legend(loc='best')
+            fig.savefig(self.traj_dir + '/epo{}_{}_gt_traj.png'.format(epo, split))
+            plt.close(fig)
+            # plot predicted trajectory
+            fig = plt.figure()
+            plt.scatter(pred_traj[0, :], pred_traj[1, :], cmap=cmap, c=color, label='pred')
+            plt.title("Predicted Trajectory in UTM Frame")
+            plt.xlabel("x [m]")
+            plt.ylabel("y [m]")
+            plt.legend(loc='best')
+            fig.savefig(self.traj_dir + '/epo{}_{}_pred_traj.png'.format(epo, split))
+            plt.close(fig)
 
     def generate_random_visuals(self, disp_net, pose_net, dataloader, criterion, sample_size, epo, split, skip=1):
         """Randomly selects samples from a dataloader to produce visuals with.

@@ -92,7 +92,7 @@ def main():
     total_time = time.time() - start_time
     visualizer.generate_random_visuals(disp_net, pose_net, test_loader, criterion,
                                        args.vis_per_epoch, epo, 'test', args.skip_freq)
-    visualizer.generate_trajectories(gt_traj, pred_traj, epo, 'test')
+    visualizer.generate_trajectories(gt_traj, pred_traj, epo, 'test', overlay=True)
 
     print_str = "ATE - {:.3f} | view synth loss - {:.3f} | smooth loss - {:.3f}".format(ate, l_test[1], l_test[2])
     print_str += "samples / sec - {:.5f} | total time - {:.3f}".format(rate, total_time)
