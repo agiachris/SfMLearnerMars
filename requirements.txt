@@ -1,0 +1,19 @@
+certifi==2020.12.5
+cycler==0.10.0
+kiwisolver @ file:///home/conda/feedstock_root/build_artifacts/kiwisolver_1604322295622/work
+matplotlib @ file:///home/conda/feedstock_root/build_artifacts/matplotlib-suite_1605180228501/work
+numpy @ file:///home/conda/feedstock_root/build_artifacts/numpy_1604945996350/work
+olefile==0.46
+Pillow @ file:///tmp/build/80754af9/pillow_1603822255246/work
+pyparsing==2.4.7
+PyQt5==5.12.3
+PyQt5-sip==4.19.18
+PyQtChart==5.12
+PyQtWebEngine==5.12.1
+python-dateutil==2.8.1
+scipy @ file:///tmp/build/80754af9/scipy_1597686650319/work
+six @ file:///tmp/build/80754af9/six_1605205327372/work
+torch==1.4.0
+torchaudio==0.4.0a0+ba6d67b
+torchvision==0.5.0
+tornado @ file:///home/conda/feedstock_root/build_artifacts/tornado_1604105045397/work
