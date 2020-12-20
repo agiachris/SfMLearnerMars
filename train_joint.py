@@ -11,7 +11,7 @@ import torch.utils.data
 from SfMLearnerMars.dataset import CEPTDataset
 from SfMLearnerMars.models import (DispNet, PoseNet)
 from SfMLearnerMars.losses import ViewSynthesisLoss
-from SfMLearnerMars.utils import (Visualizer, compute_ate, model_checkpoint)
+from SfMLearnerMars.utils import (Visualizer, compute_ate, model_checkpoint, generate_curve, generate_ate_curve)
 
 
 # experiment settings
@@ -46,7 +46,7 @@ parser.add_argument('--padding-mode', choices=['zeros', 'border'], default='zero
                          ' border will only null gradients of the coordinate outside (x or y)')
 
 # logging
-parser.add_argument('--save-freq', default=2, type=int, help='model checkpoint frequency')
+parser.add_argument('--save-freq', default=1, type=int, help='model checkpoint frequency')
 parser.add_argument('--vis-per-epoch', default=20, type=int, help='visuals per epoch to save')
 
 
@@ -76,7 +76,7 @@ def main():
 
     # get models and load pre-trained disparity network
     disp_net = DispNet.DispNet(1).to(device)
-    disp_net.load_state_dict(torch.load(args.disp_net))
+    disp_net.load_state_dict(torch.load(args.disp_net, map_location='cpu'))
     disp_net.train()
     pose_net = PoseNet.PoseNet(1, args.sequence_length-1).to(device)
     pose_net.init_weights()
@@ -109,8 +109,10 @@ def main():
     # track losses and absolute trajectory error
     train_loss = np.zeros((args.epochs, 3))
     val_loss = np.zeros((args.epochs, 3))
-    val_ate = np.zeros(args.epochs)
+    val_ate = np.zeros((args.epochs, 3))
+    val_ate_mean = np.zeros(args.epochs)
     total_time = np.zeros(args.epochs)
+
     for epo in range(args.epochs):
 
         # run training epoch and generate / save random visualizations
@@ -120,37 +122,43 @@ def main():
                                            args.vis_per_epoch, epo, 'train')
 
         # run validation epoch and acquire pose estimation metrics. Plot trajectories
-        l_val, ate, gt_traj, pred_traj = validate(disp_net, pose_net, val_loader, criterion, w_synth, w_smooth)
+        l_val, ate, ate_mean, gt_traj, pred_traj = validate(disp_net, pose_net, val_loader, criterion, w_synth, w_smooth)
         val_loss[epo, :] = l_val[:]
-        val_ate[epo] = ate
+        val_ate[epo, :] = ate[:]
+        val_ate_mean[epo] = ate_mean
         visualizer.generate_random_visuals(disp_net, pose_net, val_loader, criterion, args.vis_per_epoch, epo, 'val')
+        visualizer.generate_trajectory(pred_traj, 'pred', 'Predicted', epo, 'val')
         visualizer.generate_trajectories(gt_traj, pred_traj, epo, 'val')
+        if epo == 0:
+            visualizer.generate_trajectory(gt_traj, 'gt', 'Ground Truth', epo, 'val')
 
         total_time[epo] = time.time() - start_time
         print_str = "epo - {}/{} | train_loss - {:.3f} | val_loss - {:.3f} | ".format(
             epo, args.epochs, train_loss[epo, 0], val_loss[epo, 0])
-        print_str += "val_ate - {:.3f} | total_time - {}".format(ate, datetime.timedelta(seconds=total_time[epo]))
+        print_str += "val_ate - {:.3f} | total_time - {}".format(ate_mean, datetime.timedelta(seconds=total_time[epo]))
         print(print_str)
 
         # save models
         if (epo+1) % args.save_freq == 0:
-            model_checkpoint(disp_net, 'disp_net_' + str(epo), checkpoint_path)
-            model_checkpoint(pose_net, 'pose_net_' + str(epo), checkpoint_path)
+            model_checkpoint(disp_net, 'disp_net_' + str(epo+1), checkpoint_path)
+            model_checkpoint(pose_net, 'pose_net_' + str(epo+1), checkpoint_path)
 
         # save current stats
         np.savetxt(os.path.join(log_path, 'train_loss.txt'), train_loss)
         np.savetxt(os.path.join(log_path, 'val_loss.txt'), val_loss)
         np.savetxt(os.path.join(log_path, 'val_ate.txt'), val_ate)
+        np.savetxt(os.path.join(log_path, 'val_ate_mean.txt'), val_ate_mean)
         np.savetxt(os.path.join(log_path, 'time_log.txt'), total_time)
 
-    # generate loss curves
-    visualizer.generate_curve([train_loss[:, 0], val_loss[:, 0]], ['train', 'val'], 'loss',
-                              'Train vs Val Combined Loss', log_path)
-    visualizer.generate_curve([train_loss[:, 1], val_loss[:, 1]], ['train', 'val'], 'photometric loss',
-                              'Train vs Val Photometric Reconstruction Loss', log_path)
-    visualizer.generate_curve([train_loss[:, 2], val_loss[:, 2]], ['train', 'val'], 'depth smooth loss',
-                              'Train vs Val Depth Smoothness Loss', log_path)
-    visualizer.generate_curve([val_ate], ['val'], 'ATE', 'Validation Absolute Trajectory Error', log_path)
+    # generate metric curves
+    generate_curve([train_loss[:, 0], val_loss[:, 0]], ['train', 'val'], 'loss',
+                   'Train vs Val Combined Loss', log_path)
+    generate_curve([train_loss[:, 1], val_loss[:, 1]], ['train', 'val'], 'photometric loss',
+                   'Train vs Val Photometric Reconstruction Loss', log_path)
+    generate_curve([train_loss[:, 2], val_loss[:, 2]], ['train', 'val'], 'depth smooth loss',
+                   'Train vs Val Depth Smoothness Loss', log_path)
+    generate_curve([val_ate_mean], ['val'], 'ATE', 'Validation Absolute Trajectory Error', log_path)
+    generate_ate_curve(val_ate, log_path)
 
 
 def train_epoch(disp_net, pose_net, train_loader, criterion, optim, w1, w2):
@@ -251,4 +259,4 @@ def validate(disp_net, pose_net, val_loader, criterion, w1, w2):
 
     disp_net.train()
     pose_net.train()
-    return total_loss / i, ate_mean, traj_gt, traj_pred
+    return total_loss / i, ate, ate_mean, traj_gt, traj_pred

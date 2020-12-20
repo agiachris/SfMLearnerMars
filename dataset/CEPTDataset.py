@@ -6,12 +6,20 @@ from torch.utils.data import Dataset
 from SfMLearnerMars.utils import (load_as_float, undistort_image, convert_date_string_to_unix_seconds)
 
 
-train_runs = [('run1_base_hr', 42, 2550),
+run_map = {
+    'train': [('run1_base_hr', 42, 2550),
               ('run2_base_hr', 12, 2437),
               ('run3_base_hr', 5, 1821),
-              ('run4_base_hr', 34, 2263)]
-val_runs = [('run5_base_hr', 53, 3451)]
-test_runs = [('run6_base_hr', 3, 3521)]
+              ('run4_base_hr', 34, 2263)],
+    'val': [('run5_base_hr', 53, 3451)],
+    'test': [('run6_base_hr', 3, 3521)],
+    'run1': [('run1_base_hr', 42, 2550)],
+    'run2': [('run2_base_hr', 12, 2437)],
+    'run3': [('run3_base_hr', 5, 1821)],
+    'run4': [('run4_base_hr', 34, 2263)],
+    'run5': [('run5_base_hr', 53, 3451)],
+    'run6': [('run6_base_hr', 3, 3521)]
+}
 
 
 class CEPT(Dataset):
@@ -20,7 +28,7 @@ class CEPT(Dataset):
             the images resolution.
         Args:
             root: root path to dataset
-            split: data split -- one of ['train', 'val', 'test']
+            split: data split -- one of ['train', 'val', 'test', 'run1', 'run2', 'run3', 'run4', 'run5', 'run6']
             sequence_length: length of each sequence (centered around target image)
             scale: down-sample factor of height and width of images
             seed: random seed
@@ -34,15 +42,9 @@ class CEPT(Dataset):
         # data split config
         self.use_gt_pose = False
         self.pose_aligned = False
-        runs = None
-        if split == 'train':
-            runs = train_runs
-        else:
+        runs = run_map[split]
+        if split != 'train':
             self.use_gt_pose = True
-            if split == 'val':
-                runs = val_runs
-            elif split == 'test':
-                runs = test_runs
 
         # want samples within a range of target frame
         sequence_shift = (sequence_length - 1) // 2

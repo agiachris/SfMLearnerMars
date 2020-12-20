@@ -11,9 +11,10 @@ class ViewSynthesisLoss:
         loss (view synthesis) and smoothness loss (depth).
         """
         self.device = device
+        self.warper = ImageWarping(rotation_mode, padding_mode)
+        # downscale intrinsic matrix parameters to match dataloader transforms
         intrinsic = torch.from_numpy(intrinsics).to(device)
         self.intrinsic = torch.cat((intrinsic[:2, :] / scale, intrinsic[2:, :]), dim=0)
-        self.warper = ImageWarping(rotation_mode, padding_mode)
 
     def photometric_reconstruction_loss(self, tgt_img, depth, ref_imgs, poses):
         """Compute photometric reconstruction loss between reference images and a target image via
