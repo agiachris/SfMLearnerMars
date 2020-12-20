@@ -29,8 +29,6 @@ parser.add_argument('--learning-rate', default=2e-4, type=float, help='initial l
 parser.add_argument('--momentum', default=0.9, type=float, help='momentum for sgd, alpha parameter for adam')
 parser.add_argument('--beta', default=0.999, type=float, help='beta parameters for adam')
 parser.add_argument('--weight-decay', default=0, type=float, help='weight decay')
-
-# loss weights
 parser.add_argument('-p', '--photo-loss-weight', default=1, type=float, help='weight for photometric loss')
 parser.add_argument('-m', '--mask-loss-weight', default=0, type=float, help='weight for explainabilty mask')
 parser.add_argument('-s', '--smooth-loss-weight', default=0.01, type=float, help='weight for disparity smoothness loss')
@@ -109,7 +107,6 @@ def main():
     # track losses and absolute trajectory error
     train_loss = np.zeros((args.epochs, 3))
     val_loss = np.zeros((args.epochs, 3))
-    val_ate = np.zeros((args.epochs, 3))
     val_ate_mean = np.zeros(args.epochs)
     total_time = np.zeros(args.epochs)
 
@@ -124,7 +121,6 @@ def main():
         # run validation epoch and acquire pose estimation metrics. Plot trajectories
         l_val, ate, ate_mean, gt_traj, pred_traj = validate(disp_net, pose_net, val_loader, criterion, w_synth, w_smooth)
         val_loss[epo, :] = l_val[:]
-        val_ate[epo, :] = ate[:]
         val_ate_mean[epo] = ate_mean
         visualizer.generate_random_visuals(disp_net, pose_net, val_loader, criterion, args.vis_per_epoch, epo, 'val')
         visualizer.generate_trajectory(pred_traj, 'pred', 'Predicted', epo, 'val')
@@ -146,7 +142,6 @@ def main():
         # save current stats
         np.savetxt(os.path.join(log_path, 'train_loss.txt'), train_loss)
         np.savetxt(os.path.join(log_path, 'val_loss.txt'), val_loss)
-        np.savetxt(os.path.join(log_path, 'val_ate.txt'), val_ate)
         np.savetxt(os.path.join(log_path, 'val_ate_mean.txt'), val_ate_mean)
         np.savetxt(os.path.join(log_path, 'time_log.txt'), total_time)
 
@@ -158,7 +153,6 @@ def main():
     generate_curve([train_loss[:, 2], val_loss[:, 2]], ['train', 'val'], 'depth smooth loss',
                    'Train vs Val Depth Smoothness Loss', log_path)
     generate_curve([val_ate_mean], ['val'], 'ATE', 'Validation Absolute Trajectory Error', log_path)
-    generate_ate_curve(val_ate, log_path)
 
 
 def train_epoch(disp_net, pose_net, train_loader, criterion, optim, w1, w2):

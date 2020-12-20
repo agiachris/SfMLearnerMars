@@ -28,8 +28,6 @@ parser.add_argument('--learning-rate', default=2e-4, type=float, help='initial l
 parser.add_argument('--momentum', default=0.9, type=float, help='momentum for sgd, alpha parameter for adam')
 parser.add_argument('--beta', default=0.999, type=float, help='beta parameters for adam')
 parser.add_argument('--weight-decay', default=0, type=float, help='weight decay')
-
-# loss weights
 parser.add_argument('-p', '--photo-loss-weight', default=1, type=float, help='weight for photometric loss')
 parser.add_argument('-s', '--smooth-loss-weight', default=0.01, type=float, help='weight for disparity smoothness loss')
 

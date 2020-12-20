@@ -26,8 +26,6 @@ parser.add_argument('--seed', default=0, type=int, help='seed for random functio
 
 # hyper-parameters
 parser.add_argument('--batch-size', default=4, type=int, help='mini-batch size')
-
-# loss weights
 parser.add_argument('-p', '--photo-loss-weight', default=1, type=float, help='weight for photometric loss')
 parser.add_argument('-m', '--mask-loss-weight', default=0, type=float, help='weight for explainabilty mask')
 parser.add_argument('-s', '--smooth-loss-weight', default=0.01, type=float, help='weight for disparity smoothness loss')
