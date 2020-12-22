@@ -8,14 +8,14 @@ import torch
 import torch.optim
 import torch.utils.data
 
-from SfMLearnerMars.dataset import CEPTDataset
+from SfMLearnerMars.dataset import CPETDataset
 from SfMLearnerMars.models import (DispNet, PoseNet)
 from SfMLearnerMars.losses import ViewSynthesisLoss
-from SfMLearnerMars.utils import (Visualizer, compute_ate, model_checkpoint, generate_curve, generate_ate_curve)
+from SfMLearnerMars.utils import (Visualizer, compute_ate_horn, model_checkpoint, generate_curve)
 
 
 # experiment settings
-parser = argparse.ArgumentParser(description="Train SfM on CEPT Dataset")
+parser = argparse.ArgumentParser(description="Train SfM on CPET Dataset")
 parser.add_argument('--exp-name', type=str, required=True, help='experiment name')
 parser.add_argument('--disp-net', type=str, required=True, help='path to pre-trained disparity net weights')
 parser.add_argument('--dataset-dir', type=str, default='./input', help='path to data root')
@@ -88,8 +88,8 @@ def main():
     optim = torch.optim.Adam(optim_params, betas=(args.momentum, args.beta), weight_decay=args.weight_decay)
 
     # get sequential dataset
-    train_set = CEPTDataset.CEPT(args.dataset_dir, 'train', args.sequence_length, args.seed)
-    val_set = CEPTDataset.CEPT(args.dataset_dir, 'val', args.sequence_length, args.seed)
+    train_set = CPETDataset.CPET(args.dataset_dir, 'train', args.sequence_length, args.seed)
+    val_set = CPETDataset.CPET(args.dataset_dir, 'val', args.sequence_length, args.seed)
     train_loader = torch.utils.data.DataLoader(train_set, batch_size=args.batch_size, shuffle=True, pin_memory=True)
     val_loader = torch.utils.data.DataLoader(val_set, batch_size=args.batch_size, shuffle=False, pin_memory=True)
 
@@ -119,14 +119,18 @@ def main():
                                            args.vis_per_epoch, epo, 'train')
 
         # run validation epoch and acquire pose estimation metrics. Plot trajectories
-        l_val, ate, ate_mean, gt_traj, pred_traj = validate(disp_net, pose_net, val_loader, criterion, w_synth, w_smooth)
+        l_val, ate, ate_mean, gt_traj, pred_traj = validate(disp_net, pose_net, val_loader,
+                                                            criterion, w_synth, w_smooth)
         val_loss[epo, :] = l_val[:]
         val_ate_mean[epo] = ate_mean
+
+        # visualization of disparity maps, BEV trajectories, and 3D trajectories
         visualizer.generate_random_visuals(disp_net, pose_net, val_loader, criterion, args.vis_per_epoch, epo, 'val')
-        visualizer.generate_trajectory(pred_traj, 'pred', 'Predicted', epo, 'val')
-        visualizer.generate_trajectories(gt_traj, pred_traj, epo, 'val')
+        visualizer.generate_trajectory(pred_traj, 'pred', 'Estimated', epo, 'val')
+        visualizer.generate_trajectories(gt_traj, pred_traj, "Horns", epo, 'val')
+        visualizer.generate_3d_trajectory(gt_traj, pred_traj, "Horns", epo, 'val')
         if epo == 0:
-            visualizer.generate_trajectory(gt_traj, 'gt', 'Ground Truth', epo, 'val')
+            visualizer.generate_trajectory(gt_traj, 'gt', 'True', epo, 'val')
 
         total_time[epo] = time.time() - start_time
         print_str = "epo - {}/{} | train_loss - {:.3f} | val_loss - {:.3f} | ".format(
@@ -249,7 +253,7 @@ def validate(disp_net, pose_net, val_loader, criterion, w1, w2):
     gt_pose, tgt_idx = val_loader.dataset.get_gt_pose()
     
     # compute ATE metric and acquire aligned trajectories -- [M, 3]
-    ate, ate_mean, traj_gt, traj_pred = compute_ate(gt_pose, sequence_pose, tgt_idx)
+    ate, ate_mean, traj_gt, traj_pred = compute_ate_horn(gt_pose, sequence_pose, tgt_idx)
 
     disp_net.train()
     pose_net.train()

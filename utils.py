@@ -3,6 +3,7 @@ import cv2
 import torch
 import datetime
 import numpy as np
+from mpl_toolkits.mplot3d import Axes3D
 import matplotlib.pyplot as plt
 
 
@@ -12,7 +13,7 @@ intrinsics = np.array([[904.04572636, 0, 645.74398382],
                        [0, 0, 1]], dtype=np.float32)
 
 # Description, Symbol, trans_x [m], trans_y [m], trans_z [m], quat_x, quat_y, quat_z, quat_w
-cam_to_rover_coeffs = np.array([0.305,-0.003,0.604,-0.579,0.584,-0.407,0.398], dtype=np.float32)
+cam_to_rover_coeffs = np.array([0.305, -0.003, 0.604, -0.579, 0.584, -0.407, 0.398], dtype=np.float32)
 
 # k1, k2, p1, p2, k3
 distortion_coeffs = np.array([-0.3329137, 0.10161043, 0.00123166, -0.00096204, -0])
@@ -204,9 +205,71 @@ def scale_trajectory(trans_gt, trans_pred):
     return trans_pred * scale
 
 
-def compute_ate(gt_pose, pred_pose, tgt_idx):
+def umeyama(X, Y):
+    """Rigid alignment of two sets of points in k-dimensional Euclidean space.
+    Given two sets of points in correspondence, this function computes the
+    scaling, rotation, and translation that define the transform TR that
+    minimizes the sum of squared errors between TR(X) and its corresponding
+    points in Y.  This routine takes O(n k^3)-time.
+    Parameters:
+        X:
+            A ``k x n`` matrix whose columns are points.
+        Y:
+            A ``k x n`` matrix whose columns are points that correspond to the
+            points in X
+    Returns:
+        c,R,t:
+            The  scaling, rotation matrix, and translation vector defining the
+            linear map TR as ::
+                       TR(x) = c * R * x + t
+             such that the average norm of ``TR(X(:, i) - Y(:, i))`` is
+             minimized.
+    Copyright: Carlo Nicolini, 2013
+    Code adapted from the Mark Paskin Matlab version from
+    http://openslam.informatik.uni-freiburg.de/data/svn/tjtf/trunk/matlab/ralign.m
+    See paper by Umeyama (1991)
+    Code from: https://github.com/sdss/guiderActor/blob/main/python/guiderActor/gimg/umeyama.py
+    """
+
+    m, n = X.shape
+
+    mx = X.mean(1)
+    my = Y.mean(1)
+
+    Xc = X - np.tile(mx, (n, 1)).T
+    Yc = Y - np.tile(my, (n, 1)).T
+
+    sx = np.mean(np.sum(Xc * Xc, 0))
+
+    Sxy = np.dot(Yc, Xc.T) / n
+
+    U, D, V = np.linalg.svd(Sxy, full_matrices=True, compute_uv=True)
+    V = V.T.copy()
+
+    r = np.linalg.matrix_rank(Sxy)
+    S = np.eye(m)
+
+    if r < (m - 1):
+        raise ValueError('not enough independent measurements')
+
+    if (np.linalg.det(Sxy) < 0):
+        S[-1, -1] = -1
+    elif (r == m - 1):
+        if (np.linalg.det(U) * np.linalg.det(V) < 0):
+            S[-1, -1] = -1
+
+    R = np.dot(np.dot(U, S), V.T)
+    c = np.trace(np.dot(np.diag(D), S)) / sx
+    t = my - c * np.dot(R, mx)
+
+    return c, R, t
+
+
+def compute_ate_horn(gt_pose, pred_pose, tgt_idx):
     """Compute the absolute trajectory error of the predicted pose estimates
-    against the ground truth UTM pose.
+    against the ground truth UTM pose. Constrained alignment with Horn's closed form -
+    rotation / translation (e.g. rigid body transform) optimized separately from scale and
+    starting positions of both trajectories are constrained to be the same when computing ATE.
 
     Args:
         gt_pose: np.array of ground truth poses -- [N, 8].
@@ -222,9 +285,9 @@ def compute_ate(gt_pose, pred_pose, tgt_idx):
         trans_pred_scaled: np.array scaled and aligned estimated position in UTM frame -- [3, N]
     """
 
-    # get homogenous prediction and ground truth sequences
+    # homogenous absolute trajectory
     homogenous_pred_pose = absolute_from_relative(pred_pose)
-    homogenous_pred_pose = np.linalg.inv(homogenous_pred_pose[0, ...]) @ homogenous_pred_pose
+    homogenous_pred_pose = pose_vec2mat(cam_to_rover_coeffs, 'quat') @ homogenous_pred_pose
 
     # downsample predicted poses to align with ground truth
     homogenous_pred_pose = homogenous_pred_pose[tgt_idx]
@@ -236,12 +299,8 @@ def compute_ate(gt_pose, pred_pose, tgt_idx):
     rover_to_utm = trans_gt[:, 0].reshape(3, 1)
     trans_gt = trans_gt - rover_to_utm
 
-    # first alignment and scaling
+    # alignment and scaling
     trans_pred_aligned = align_trajectories(trans_gt, trans_pred)
-    trans_pred_scaled = scale_trajectory(trans_gt, trans_pred_aligned)
-
-    # second alignment and scaling
-    trans_pred_aligned = align_trajectories(trans_gt, trans_pred_scaled)
     trans_pred_scaled = scale_trajectory(trans_gt, trans_pred_aligned)
 
     # compute absolute trajectory error
@@ -254,6 +313,56 @@ def compute_ate(gt_pose, pred_pose, tgt_idx):
     trans_gt = trans_gt + rover_to_utm
 
     return ate, ate_mean, trans_gt, trans_pred_scaled
+
+
+def compute_ate_umeyama(gt_pose, pred_pose, tgt_idx):
+    """Compute the absolute trajectory error of the predicted pose estimates
+    against the ground truth UTM pose. General alignment (similarity transform) with
+    Umeyama method - ATE computed without constraining the start positions of both
+    trajectories to be the same.
+
+    Args:
+        gt_pose: np.array of ground truth poses -- [N, 8].
+                 Ground truth poses are represented as [t, x, y, z, qx, qy, qz, qw]
+        pred_pose: np.array of predicted poses -- [M, 6].
+                   Predicted poses are represented as [dx, dy, dz, dex, dey, dez] where
+                   (dx, dy, dz) are the relative positions and (dex, dey, dez) are the relative euler rotations
+        tgt_idx: np.array of target frame indices corresponding to ground truth poses -- [N]
+    Returns:
+        ate: absolute trajectory error in 3 dimensions
+        ate_mean: mean of x-y-z absolute trajectory errors
+        trans_gt: np.array of ground truth position sequence in UTM frame -- [3, N]
+        trans_pred_scaled: np.array scaled and aligned estimated position in UTM frame -- [3, N]
+    """
+
+    # homogenous absolute trajectory
+    homogenous_pred_pose = absolute_from_relative(pred_pose)
+    homogenous_pred_pose = pose_vec2mat(cam_to_rover_coeffs, 'quat') @ homogenous_pred_pose
+
+    # downsample predicted poses to align with ground truth
+    homogenous_pred_pose = homogenous_pred_pose[tgt_idx]
+    assert (homogenous_pred_pose.shape[0] == gt_pose.shape[0])
+
+    # create [3, N] translational trajectories
+    trans_pred = homogenous_pred_pose[:, :3, 3].T
+    trans_gt = gt_pose[:, 1:4].T
+    rover_to_utm = trans_gt[:, 0].reshape(3, 1)
+    trans_gt = trans_gt - rover_to_utm
+
+    # compute umeyama alignment
+    scale, rot, trans = umeyama(trans_pred, trans_gt)
+    trans_pred_aligned = scale * (rot @ trans_pred) + trans.reshape(3, 1)
+    
+    # compute absolute trajectory error
+    alignment_error = trans_pred_aligned - trans_gt
+    ate = np.sqrt(np.sum(np.multiply(alignment_error, alignment_error), 0))
+    ate_mean = ate.mean()
+
+    # bring both trajectories back to utm coordinates
+    trans_pred_aligned = trans_pred_aligned + rover_to_utm
+    trans_gt = trans_gt + rover_to_utm
+
+    return ate, ate_mean, trans_gt, trans_pred_aligned
 
 
 def model_checkpoint(model, name, path):
@@ -342,13 +451,14 @@ class Visualizer:
         fig.savefig(self.traj_dir + '/epo{}_{}_{}_traj.png'.format(epo, split, label))
         plt.close(fig)
 
-    def generate_trajectories(self, gt_traj, pred_traj, epo, split):
+    def generate_trajectories(self, gt_traj, pred_traj, method, epo, split):
         """Generate visualization of ground truth trajectory and predicted trajectory in bird's
         eye view frame (x-y plane) which have been aligned in terms of scale, rotation, and translation.
 
         Args:
             gt_traj: np.array of ground truth position trajectory -- [3, N]
             pred_traj: np.array of predicted position trajectory -- [3, N]
+            method: alignment method -- str
             epo: current epoch -- int
             split: data split -- str
         """
@@ -363,11 +473,48 @@ class Visualizer:
         # overlay ground truth and predicted trajectories
         plt.scatter(gt_traj[0, :], gt_traj[1, :], cmap=cmap_gt, c=color, label='gt', s=1.75)
         plt.scatter(pred_traj[0, :], pred_traj[1, :], cmap=cmap_pred, c=color, label='pred', s=1.75)
-        plt.title("Ground Truth vs Predicted Trajectory in UTM Frame")
+        plt.title("True vs Estimated Trajectory in UTM Frame - {}".format(method))
         plt.xlabel("Easting [m]")
         plt.ylabel("Northing [m]")
         plt.legend(loc='best')
-        fig.savefig(self.traj_dir + '/epo{}_{}_traj_overlap.png'.format(epo, split))
+        fig.savefig(self.traj_dir + '/epo{}_{}_{}_traj_overlap.png'.format(epo, split, method.lower()))
+        plt.close(fig)
+
+    def generate_3d_trajectory(self, gt_traj, pred_traj, method, epo, split):
+        """Generate visualization of ground truth trajectory and predicted trajectory in 3D
+         which have been aligned in terms of scale, rotation, and translation.
+
+        Args:
+            gt_traj: np.array of ground truth position trajectory -- [3, N]
+            pred_traj: np.array of predicted position trajectory -- [3, N]
+            method: alignment method -- str
+            epo: current epoch -- int
+            split: data split -- str
+        """
+        # plot in local coordinate frame
+        first_frame = gt_traj[:, 0].reshape(3, 1)
+        gt_traj = gt_traj - first_frame
+        pred_traj = pred_traj - first_frame
+
+        assert (pred_traj.shape == gt_traj.shape)
+        fig = plt.figure()
+        fig.suptitle("True vs Estimated Trajectory in 3D - {}".format(method))
+
+        # ground truth blue color scheme - prediction red color scheme
+        color = np.arange(gt_traj.shape[1]) / gt_traj.shape[1]
+        cmap_gt = plt.get_cmap('winter')
+        cmap_pred = plt.get_cmap('autumn')
+
+        # create 3d scatter plot, overlay ground truth and predicted trajectories
+        ax = fig.add_subplot(111, projection='3d')
+        ax.scatter(gt_traj[0, :], gt_traj[1, :], gt_traj[2, :], cmap=cmap_gt, c=color, label='gt', s=1.75)
+        ax.scatter(pred_traj[0, :], pred_traj[1, :], pred_traj[2, :], cmap=cmap_pred, c=color, label='pred', s=1.75)
+        ax.set_xlabel("Easting [m]")
+        ax.set_ylabel("Northing [m]")
+        ax.set_zlabel("Altitude [m]")
+
+        plt.legend(loc='best')
+        fig.savefig(self.traj_dir + '/epo{}_{}_{}_3Dtraj_overlap.png'.format(epo, split, method.lower()))
         plt.close(fig)
 
     def generate_random_visuals(self, disp_net, pose_net, dataloader, criterion, sample_size, epo, split, skip=1):
@@ -461,6 +608,31 @@ class Visualizer:
 
         self.save_samples(samples, epo, split)
         disp_net.train()
+
+    def save_sample(self, tgt_img, ref_imgs, depth, warped_imgs, k):
+        """Save the first sample in each batch.
+        Args:
+            tgt_img: target frame images -- [B, 1, H, W]
+            ref_imgs: reference frame images -- [Seq, B, 1, H, W]
+            depth: predicted depth maps -- [1, B, 1, H, W]
+            warped_imgs: reconstructed target frame images from inverse warping -- [1, Seq, 1, H, W]
+            k: sample number -- int
+        """
+
+        save_dir = os.path.join(self.output_dir, 'images')
+        if not os.path.exists(save_dir):
+            os.mkdir(save_dir)
+
+        # extract sample images for visualization
+        disp = self.normalize_depth_for_display(self.get_detach(depth[0][0, 0]))
+        tgt_img = self.get_detach(tgt_img[0, 0]) * 255.0
+        ref_img = self.get_detach(ref_imgs[0][0, 0]) * 255.0
+        warped_img = self.get_detach(warped_imgs[0][0][0]) * 255.0
+
+        cv2.imwrite(save_dir + '/{}_disp_map.png'.format(k), disp)
+        cv2.imwrite(save_dir + '/{}_tgt_img.png'.format(k), tgt_img)
+        cv2.imwrite(save_dir + '/{}_ref_img.png'.format(k), ref_img)
+        cv2.imwrite(save_dir + '/{}_warp_img.png'.format(k), warped_img)
 
     def save_samples(self, samples, epo, split):
         """Saves samples to output directory.

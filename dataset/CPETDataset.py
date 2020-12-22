@@ -22,7 +22,7 @@ run_map = {
 }
 
 
-class CEPT(Dataset):
+class CPET(Dataset):
     def __init__(self, root, split, sequence_length=3, seed=0, scale=4):
         """Sequence dataset. Loads sequences of images at the set length and down-samples
             the images resolution.

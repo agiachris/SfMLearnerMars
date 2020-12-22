@@ -8,14 +8,14 @@ import torch
 import torch.optim
 import torch.utils.data
 
-from SfMLearnerMars.dataset import CEPTDepth
+from SfMLearnerMars.dataset import CPETDepth
 from SfMLearnerMars.models import DispNet
 from SfMLearnerMars.losses import ViewSynthesisLoss
 from SfMLearnerMars.utils import (Visualizer, model_checkpoint)
 
 
 # experiment settings
-parser = argparse.ArgumentParser(description="Train depth on CEPT Dataset")
+parser = argparse.ArgumentParser(description="Train depth on CPET Dataset")
 parser.add_argument('--exp-name', type=str, required=True, help='experiment name')
 parser.add_argument('--dataset-dir', type=str, default='./input', help='path to data root')
 parser.add_argument('--output-dir', type=str, default='./src/SfMLearnerMars/exp', help='experiment directory')
@@ -77,8 +77,8 @@ def main():
     optim = torch.optim.Adam(disp_net.parameters(), betas=(args.momentum, args.beta), weight_decay=args.weight_decay)
 
     # get sequence dataset
-    train_set = CEPTDepth.CEPTDepth(args.dataset_dir, 'train', args.seed)
-    val_set = CEPTDepth.CEPTDepth(args.dataset_dir, 'val', args.seed)
+    train_set = CPETDepth.CPETDepth(args.dataset_dir, 'train', args.seed)
+    val_set = CPETDepth.CPETDepth(args.dataset_dir, 'val', args.seed)
     train_loader = torch.utils.data.DataLoader(train_set, batch_size=args.batch_size, shuffle=True, pin_memory=True)
     val_loader = torch.utils.data.DataLoader(val_set, batch_size=args.batch_size, shuffle=True, pin_memory=True)
 

@@ -15,7 +15,7 @@ val_runs = [('run5_base_hr', 53, 3451)]
 test_runs = [('run6_base_hr', 3, 3521)]
 
 
-class CEPTDepth(Dataset):
+class CPETDepth(Dataset):
     def __init__(self, root, split, seed=0, scale=4):
         """Sequence dataset. Loads sequences of images at the set length and down-samples
             the images resolution.
