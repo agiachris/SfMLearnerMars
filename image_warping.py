@@ -2,6 +2,7 @@ import torch
 import torch.nn.functional as F
 
 
+# Much of this code was adapted from: https://github.com/ClementPinard/SfmLearner-Pytorch
 class ImageWarping:
 
     def __init__(self, rotation_mode='euler', padding_mode='zeros'):

@@ -4,6 +4,7 @@ from SfMLearnerMars.image_warping import ImageWarping
 from SfMLearnerMars.utils import intrinsics
 
 
+# Much of this code was adapted from: https://github.com/ClementPinard/SfmLearner-Pytorch
 class ViewSynthesisLoss:
 
     def __init__(self, device, rotation_mode='euler', padding_mode='zeros', scale=4):
