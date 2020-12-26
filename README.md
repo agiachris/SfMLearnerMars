@@ -20,7 +20,7 @@ Sample Pose Estimation (Run2 Trajectory)
 [disp2]: https://github.com/agiachris/SfMLearnerMars/tree/main/misc/train_s2_disp.png "Disparity Sample 2"
 [img2]: https://github.com/agiachris/SfMLearnerMars/tree/main/misc/train_s2_tgt_img.png "Target Image 2"
 
-[run2d]: https://github.com/agiachris/SfMLearnerMars/blob/main/misc/epo0_run2_umeyama_traj_overlap.png?raw=true "Run2 BEV Trajectory"
+[run2d]: https://github.com/agiachris/SfMLearnerMars/blob/main/misc/epo0_run2_umeyama_traj_overlap.png "Run2 BEV Trajectory"
 [run3d]: https://github.com/agiachris/SfMLearnerMars/tree/main/misc/epo0_run2_umeyama_3Dtraj_overlap.png "Run2 3D Trajectory"
 
 ### Requirements
