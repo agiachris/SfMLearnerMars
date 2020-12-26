@@ -49,8 +49,7 @@ epo = 0
 device = torch.device("cuda") if torch.cuda.is_available() else torch.device("cpu")
 
 
-def main():
-    args = parser.parse_args()
+def main(args):
     exp_path = os.path.join(args.output_dir, args.exp_name)
     log_path = os.path.join(exp_path, 'logs')
     checkpoint_path = os.path.join(exp_path, 'checkpoints')
@@ -198,3 +197,7 @@ def validate(disp_net, val_loader, criterion, w1, w2):
 
     disp_net.train()
     return total_loss / i
+
+if __name__ == '__main__':
+    arguments = parser.parse_args()
+    main(arguments)

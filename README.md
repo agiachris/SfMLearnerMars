@@ -22,16 +22,21 @@ Sample Disparities:
 [run3d]: https://github.com/agiachris/SfMLearnerMars/blob/main/misc/epo0_run2_umeyama_3Dtraj_overlap.png "Run2 3D Trajectory"
 
 ### About
-This codebase
-- Stuff
--
+The goal of this project is to investigate the feasibility of SfMLearner for tracking in
+low-textured martian-like environments from monochrome image sequences. The Canadian Planetary
+Emulation Terrain Energy-Aware Rover Navigation Dataset provides the necessary data to explore this idea.
+On a high-level, here is what's been done:
+- Supervised depth pre-training pipeline if you wish to accelerate the joint learning of pose and depth 
+by leveraging ground-truth pose 
+- Unsupervised learning of motion and depth on the CPET dataset (with option to use pre-trained depth weights)
+- Methods for generating, aligning, and plotting (2D & 3D) of absolute trajectories from relative pose estimates during online training
+- An independent evaluation pipeline that generates quantitative metrics (ATE) on a specified sequence with pre-trained depth and pose CNN weights
 
 ### Requirements
 - OpenCV (4.5.0)
 - PyTorch (1.4.0)
 - MatPlotLib (3.3.3)
 - NumPy (1.19.4)
-
 
 ### Data
 Training and evaluation require no pre-processing of data. Simply download the "Human-readable (base) data download"
@@ -55,11 +60,42 @@ Any missing files (e.g. global-pose-utm for run5) can be manually downloaded fro
 
 ### Training
 
+#### Supervised Depth Pre-training
+There are potentially many factors that inhibit SfMLearner in martian-like environments. For instance, pixel regions 
+across images are extremely similar due to the scene's homogenous nature, and operating on monochrome images offer 
+lower pixel variance. So, unsupervised learning from scratch may take much longer to converge than expected - or might
+not converge. 
+
+After downloading the CPET data, you can train the depth network with the below command. Additional flags can be found 
+in [train_depth.py](https://github.com/agiachris/SfMLearnerMars/blob/main/train_depth.py).
+```python
+python train_depth.py --exp-name <exp-name> --dataset-dir <path/to/data/root>
+```
+
+Alternatively, you can download the pre-trained depth network weights (epoch 5) from this 
+[link](https://drive.google.com/file/d/1R6mspmyvz_wO7DCmGFCK96AElrXYnSBe/view?usp=sharing).
+
+#### Joint Depth and Pose Learning
+Jointly train the pose and depth network with:
+```python
+python train_joint.py --exp-name <exp-name> --dataset-dir <path/to/data/root> --disp-net <path/to/pre-trained/weights>
+```
+The --disp-net flag is optional - if left unfilled, the script will default to training the depth and pose network from
+scratch in fully unsupervised fashion. The program will save plots of estimated trajectory on the validation sequence
+at each epoch. A sample plot n run2_base_hr sequence is given below. Furthermore, quantitative metrics / model 
+checkpoints will be saved in the experiment directory.  
+
 Sample Pose Estimation (Run2 Trajectory)
 ![][run2d]
 
-
 ### Evaluation
+
+The [evaluate_joint.py](https://github.com/agiachris/SfMLearnerMars/blob/main/evaluate_joint.py) script is used to
+evaluate the trained models trained models on the test sequence (run6), but it works just fine on any of the training / 
+validation sequences too. You can run evaluation on --run-sequence equal to one of 'run1'-'run6' with:
+```python
+python evaluate_joint.py --exp-name <exp-name> --run-sequence <seq> --dataset-dir <path/to/data/root> --disp-net <path/to/depth/weights> --pose-net <path/to/pose/weights>
+```
 
 Sample Pose Estimation (Run2 Trajectory)
 ![][run3d]

@@ -51,18 +51,8 @@ epo = 0
 device = torch.device("cuda") if torch.cuda.is_available() else torch.device("cpu")
 
 
-def main(input_dir=None, output_dir=None, run_sequence=''):
-    args = parser.parse_args()
-
-    # docker call - change default input and output directories
-    if input_dir is not None and output_dir is not None:
-        args.dataset_dir = input_dir
-        args.output_dir = output_dir
-    if run_sequence != '':
-        args.run_sequence = run_sequence
-        run_sequence = '_' + run_sequence
-
-    exp_path = os.path.join(args.output_dir, args.exp_name + run_sequence)
+def main(args):
+    exp_path = os.path.join(args.output_dir, args.exp_name)
     log_path = os.path.join(exp_path, 'logs')
 
     if not os.path.exists(args.output_dir):
@@ -190,3 +180,8 @@ def test(disp_net, pose_net, test_loader, criterion, visualizer, skip_freq, w1, 
     rate = test_loader.dataset.__len__() / total_time
 
     return total_loss / i, horn_result, umeyama_result, rate
+
+
+if __name__ == '__main__':
+    arguments = parser.parse_args()
+    main(arguments)
