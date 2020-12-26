@@ -2,13 +2,13 @@
 SfMLearner applied to the Canadian Planetary Emulation Terrain Energy-Aware Rover Navigation Dataset (CPET) [1]. 
 The report for this project can be found [here](https://drive.google.com/file/d/16v0W1VfNscWW1BTFe7GG9-p4JagS2nBy/view?usp=sharing).
 
-This code base is largely built off the [SFMLearner PyTorch](https://github.com/ClementPinard/SfmLearner-Pytorch) 
+This code base is largely built off the [SfMLearner PyTorch](https://github.com/ClementPinard/SfmLearner-Pytorch) 
 implementation by Clément Pinard. The original project page of "Unsupervised Learning of Depth and 
 Ego-Motion from Video" [2] by [Tinghui Zhou](https://people.eecs.berkeley.edu/~tinghuiz/), 
 [Matthew Brown](http://matthewalunbrown.com/research/research.html), [Noah Snavely](http://www.cs.cornell.edu/~snavely/), 
 and [David Lowe](https://www.cs.ubc.ca/~lowe/home.html) can be found [here](https://people.eecs.berkeley.edu/~tinghuiz/projects/SfMLearner/).
 
-Sample Disparities:
+Sample Disparity Predictions on CPET:
 
 ![][img1] ![][disp1]
 ![][img2] ![][disp2]
@@ -31,7 +31,7 @@ On a high-level, here is what's been done:
 by leveraging ground-truth pose 
 - Unsupervised learning of motion and depth on the CPET dataset (with option to use pre-trained depth weights)
 - Methods for generating, aligning, and plotting (2D & 3D) of absolute trajectories from relative pose estimates during online training
-- An independent evaluation pipeline that generates quantitative metrics (ATE) on a specified sequence with pre-trained depth and pose CNN weights
+- An independent evaluation pipeline that generates quantitative metrics (ATE) on a specified sequence with trained depth and pose CNN weights
 
 ### Requirements
 - OpenCV (4.5.0)
@@ -64,11 +64,11 @@ Any missing files (e.g. global-pose-utm for run5) can be manually downloaded fro
 #### Supervised Depth Pre-training
 There are potentially many factors that inhibit SfMLearner in martian-like environments. For instance, pixel regions 
 across images are extremely similar due to the scene's homogenous nature, and operating on monochrome images offer 
-lower pixel variance. So, unsupervised learning from scratch may take much longer to converge than expected - or might
-not converge. 
+lower pixel variance. So, unsupervised learning from scratch may take much longer to converge than expected, or might
+not converge at all. 
 
-After downloading the CPET data, you can train the depth network with the below command. Additional flags can be found 
-in [train_depth.py](https://github.com/agiachris/SfMLearnerMars/blob/main/train_depth.py).
+After downloading the CPET data, you can train the depth network with the command below. Additional flags can be found 
+according to [train_depth.py](https://github.com/agiachris/SfMLearnerMars/blob/main/train_depth.py).
 ```python
 python train_depth.py --exp-name <exp-name> --dataset-dir <path/to/data/root>
 ```
@@ -89,27 +89,27 @@ checkpoints will be saved in the experiment directory. Trained model weights for
 be found [here](https://drive.google.com/file/d/1Znm1yIyXd7lv7s5KtgE4QAtE0uVEzLIk/view?usp=sharing) and 
 [here](https://drive.google.com/file/d/12eAecrFjhGN-C22KONvbiLK2Rqw74Y2B/view?usp=sharing).
 
-Sample Pose Estimation (Run2 Trajectory)
+Sample Pose Estimation in Bird's Eye View (Run2 Trajectory):
 ![][run2d]
 
 ### Evaluation
 
 The [evaluate_joint.py](https://github.com/agiachris/SfMLearnerMars/blob/main/evaluate_joint.py) script is used to
-evaluate the trained models trained models on the test sequence (run6), but it works just fine on any of the training / 
-validation sequences too. You can run evaluation on --run-sequence equal to one of 'run1'-'run6' with:
+evaluate the trained models on the test sequence (run6), but it works just fine on any of the training and 
+validation sequences as well. You can run evaluation on --run-sequence 'run1'-'run6' with:
 ```python
-python evaluate_joint.py --exp-name <exp-name> --run-sequence <seq> --dataset-dir <path/to/data/root> --disp-net <path/to/depth/weights> --pose-net <path/to/pose/weights>
+python evaluate_joint.py --exp-name <exp-name> --run-sequence <seq_name> --dataset-dir <path/to/data/root> --disp-net <path/to/depth/weights> --pose-net <path/to/pose/weights>
 ```
 
-Sample Pose Estimation (Run2 Trajectory)
+Sample Pose Estimation in 3D (Run2 Trajectory):
 ![][run3d]
 
 ### Results
-Here are results on all runs of the CPET dataset. Note that these results are acquired through pre-training the depth
+Here are the results on all runs of the CPET dataset. Note that these results are acquired through pre-training the depth
 network prior to joint learning of pose and depth. ATE Easy is the Absolute Trajectory Error (ATE) computed over the 
 Umeyama aligned (similarity transform alignment) trajectories. ATE Hard is the ATE computed over the Horn's Closed Form
 aligned trajectories, where the start points of the estimated and ground-truth trajectories are identical. These metrics,
-amongst others, are generated be the evaluation script.
+amongst others, are generated by the evaluation script.
 
 
 | Sequence      | ATE Easy | ATE Hard |   Loss   | Time (hh:mm:ss) |
@@ -120,6 +120,7 @@ amongst others, are generated be the evaluation script.
 | Run 4 (train) |   3.354  |   5.263  | 4.18e-02 |     0:14:56     |
 | Run 5 (val)   |   5.601  |  10.696  | 4.20e-02 |     0:21:37     |
 | Run 6 (test)  |   8.206  |  24.010  | 4.51e-02 |     0:22:27     |
+
 
 ## References
 1. Lamarre, O., Limoyo, O., Marić, F., & Kelly, J. (2020). The Canadian Planetary Emulation
