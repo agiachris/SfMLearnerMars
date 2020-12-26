@@ -7,8 +7,21 @@ Ego-Motion from Video" [2] by [Tinghui Zhou](https://people.eecs.berkeley.edu/~t
 [Matthew Brown](http://matthewalunbrown.com/research/research.html), [Noah Snavely](http://www.cs.cornell.edu/~snavely/), 
 and [David Lowe](https://www.cs.ubc.ca/~lowe/home.html) can be found [here](https://people.eecs.berkeley.edu/~tinghuiz/projects/SfMLearner/).
 
+Sample Disparities:
+![][img1] ![][disp1]
+![][img2] ![][disp2]
 
-[depth] https://drive.google.com/file/d/1elmVJR5YkPyraf31vtZknXwzqRE_er_9/view?usp=sharing 
+Sample Pose Estimation (Run2 Trajectory)
+![][run2d] ![][run3d]
+
+[disp1]: https://github.com/agiachris/SfMLearnerMars/tree/main/misc/train_s0_disp.png "Disparity Sample 1"
+[img1]: https://github.com/agiachris/SfMLearnerMars/tree/main/misc/train_s0_tgt_img.png "Target Image 1"
+
+[disp2]: https://github.com/agiachris/SfMLearnerMars/tree/main/misc/train_s2_disp.png "Disparity Sample 2"
+[img2]: https://github.com/agiachris/SfMLearnerMars/tree/main/misc/train_s2_tgt_img.png "Target Image 2"
+
+[run2d]: https://github.com/agiachris/SfMLearnerMars/tree/main/misc/epo0_run2_umeyama_traj_overlap.png "Run2 BEV Trajectory"
+[run3d]: https://github.com/agiachris/SfMLearnerMars/tree/main/misc/epo0_run2_umeyama_3Dtraj_overlap.png "Run2 3D Trajectory"
 
 ### Requirements
 - OpenCV (4.5.0)
@@ -16,7 +29,8 @@ and [David Lowe](https://www.cs.ubc.ca/~lowe/home.html) can be found [here](http
 - MatPlotLib (3.3.3)
 - NumPy (1.19.4)
 
-### 
+### What's been done
+- Stuff
 
 
 ### Training
