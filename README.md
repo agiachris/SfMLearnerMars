@@ -1,5 +1,6 @@
 # SfMLearnerMars
-SfMLearner applied to the Canadian Planetary Emulation Terrain Energy-Aware Rover Navigation Dataset (CPET) [1].
+SfMLearner applied to the Canadian Planetary Emulation Terrain Energy-Aware Rover Navigation Dataset (CPET) [1]. 
+The report for this project can be found [here](https://drive.google.com/file/d/16v0W1VfNscWW1BTFe7GG9-p4JagS2nBy/view?usp=sharing).
 
 This code base is largely built off the [SFMLearner PyTorch](https://github.com/ClementPinard/SfmLearner-Pytorch) 
 implementation by Clément Pinard. The original project page of "Unsupervised Learning of Depth and 
@@ -76,14 +77,17 @@ Alternatively, you can download the pre-trained depth network weights (epoch 5) 
 [link](https://drive.google.com/file/d/1R6mspmyvz_wO7DCmGFCK96AElrXYnSBe/view?usp=sharing).
 
 #### Joint Depth and Pose Learning
-Jointly train the pose and depth network with:
+Run the [train_joint.py](https://github.com/agiachris/SfMLearnerMars/blob/main/train_joint.py) to jointly train the pose
+and depth network with:
 ```python
 python train_joint.py --exp-name <exp-name> --dataset-dir <path/to/data/root> --disp-net <path/to/pre-trained/weights>
 ```
 The --disp-net flag is optional - if left unfilled, the script will default to training the depth and pose network from
 scratch in fully unsupervised fashion. The program will save plots of estimated trajectory on the validation sequence
-at each epoch. A sample plot n run2_base_hr sequence is given below. Furthermore, quantitative metrics / model 
-checkpoints will be saved in the experiment directory.  
+at each epoch. A sample plot on run2_base_hr sequence is given below. Quantitative metrics / model 
+checkpoints will be saved in the experiment directory. Trained model weights for the depth and pose network can
+be found [here](https://drive.google.com/file/d/1Znm1yIyXd7lv7s5KtgE4QAtE0uVEzLIk/view?usp=sharing) and 
+[here](https://drive.google.com/file/d/12eAecrFjhGN-C22KONvbiLK2Rqw74Y2B/view?usp=sharing).
 
 Sample Pose Estimation (Run2 Trajectory)
 ![][run2d]
@@ -100,6 +104,22 @@ python evaluate_joint.py --exp-name <exp-name> --run-sequence <seq> --dataset-di
 Sample Pose Estimation (Run2 Trajectory)
 ![][run3d]
 
+### Results
+Here are results on all runs of the CPET dataset. Note that these results are acquired through pre-training the depth
+network prior to joint learning of pose and depth. ATE Easy is the Absolute Trajectory Error (ATE) computed over the 
+Umeyama aligned (similarity transform alignment) trajectories. ATE Hard is the ATE computed over the Horn's Closed Form
+aligned trajectories, where the start points of the estimated and ground-truth trajectories are identical. These metrics,
+amongst others, are generated be the evaluation script.
+
+
+| Sequence      | ATE Easy | ATE Hard |   Loss   | Time (hh:mm:ss) |
+|---------------|:--------:|:--------:|:--------:|:---------------:|
+| Run 1 (train) |   3.364  |   7.976  | 5.27e-02 |     0:12:24     |
+| Run 2 (train) |   3.154  |   6.896  | 4.54e-02 |     0:12:23     |
+| Run 3 (train) |   2.816  |   3.882  | 5.62e-02 |     0:11:32     |
+| Run 4 (train) |   3.354  |   5.263  | 4.18e-02 |     0:14:56     |
+| Run 5 (val)   |   5.601  |  10.696  | 4.20e-02 |     0:21:37     |
+| Run 6 (test)  |   8.206  |  24.010  | 4.51e-02 |     0:22:27     |
 
 ## References
 1. Lamarre, O., Limoyo, O., Marić, F., & Kelly, J. (2020). The Canadian Planetary Emulation
