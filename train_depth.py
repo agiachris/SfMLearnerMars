@@ -8,17 +8,17 @@ import torch
 import torch.optim
 import torch.utils.data
 
-from SfMLearnerMars.dataset import CPETDepth
-from SfMLearnerMars.models import DispNet
-from SfMLearnerMars.losses import ViewSynthesisLoss
-from SfMLearnerMars.utils import (Visualizer, model_checkpoint)
+from dataset import CPETDepth
+from models import DispNet
+from losses import ViewSynthesisLoss
+from utils import (Visualizer, model_checkpoint)
 
 
 # experiment settings
 parser = argparse.ArgumentParser(description="Train depth on CPET Dataset")
 parser.add_argument('--exp-name', type=str, required=True, help='experiment name')
-parser.add_argument('--dataset-dir', type=str, default='./input', help='path to data root')
-parser.add_argument('--output-dir', type=str, default='./src/SfMLearnerMars/exp', help='experiment directory')
+parser.add_argument('--dataset-dir', type=str, required=True, help='path to data root')
+parser.add_argument('--output-dir', type=str, default='./exp', help='experiment directory')
 parser.add_argument('--seed', default=0, type=int, help='seed for random functions, and network initialization')
 
 # hyper-parameters

@@ -3,7 +3,7 @@ import cv2
 import random
 import numpy as np
 from torch.utils.data import Dataset
-from SfMLearnerMars.utils import (load_as_float, undistort_image, convert_date_string_to_unix_seconds)
+from utils import (load_as_float, undistort_image, convert_date_string_to_unix_seconds)
 
 
 run_map = {

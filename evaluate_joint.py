@@ -9,33 +9,21 @@ import torch
 import torch.optim
 import torch.utils.data
 
-from SfMLearnerMars.dataset import CPETDataset
-from SfMLearnerMars.models import (DispNet, PoseNet)
-from SfMLearnerMars.losses import ViewSynthesisLoss
-from SfMLearnerMars.utils import (Visualizer, compute_ate_horn, compute_ate_umeyama)
-
-from rob501_project import parser
+from dataset import CPETDataset
+from models import (DispNet, PoseNet)
+from losses import ViewSynthesisLoss
+from utils import (Visualizer, compute_ate_horn, compute_ate_umeyama)
 
 
 # local experiment settings - configure exp name, network weights, and test sequence
-# parser = argparse.ArgumentParser(description="Test SfM on CPET Dataset")
-# parser.add_argument('--exp-name', type=str, required=True, help='experiment name')
-# parser.add_argument('--disp-net', type=str, required=True, help='path to pre-trained disparity net weights')
-# parser.add_argument('--pose-net', type=str, required=True, help='path to pre-trained pose net weights')
-# parser.add_argument('--run-sequence', type=str, required=True, help='run of the CPET to evaluate on',
-#                     choices=['run1', 'run2', 'run3', 'run4', 'run5', 'run6', 'val', 'test'])
-
-# docker call settings - default exp name, network weights, and test sequence
-parser.add_argument('--exp-name', type=str, default='SfMLearnerMars_official', help='experiment name')
-parser.add_argument('--disp-net', type=str, help='path to pre-trained disparity net weights',
-                    default='src/SfMLearnerMars/exp/disp_net_19')
-parser.add_argument('--pose-net', type=str, help='path to pre-trained pose net weights',
-                    default='src/SfMLearnerMars/exp/pose_net_19')
-parser.add_argument('--run-sequence', type=str, default='test', help='run of the CPET to evaluate on',
+parser = argparse.ArgumentParser(description="Test SfM on CPET Dataset")
+parser.add_argument('--exp-name', type=str, required=True, help='experiment name')
+parser.add_argument('--disp-net', type=str, required=True, help='path to pre-trained disparity net weights')
+parser.add_argument('--pose-net', type=str, required=True, help='path to pre-trained pose net weights')
+parser.add_argument('--run-sequence', type=str, required=True, help='run of the CPET to evaluate on',
                     choices=['run1', 'run2', 'run3', 'run4', 'run5', 'run6', 'val', 'test'])
-
-parser.add_argument('--dataset-dir', type=str, default='./input', help='path to data root')
-parser.add_argument('--output-dir', type=str, default='./output', help='experiment directory')
+parser.add_argument('--dataset-dir', type=str, required=True, help='path to data root')
+parser.add_argument('--output-dir', type=str, default='./exp', help='experiment directory')
 parser.add_argument('--seed', default=0, type=int, help='seed for random functions, and network initialization')
 
 # hyper-parameters
@@ -60,8 +48,7 @@ parser.add_argument('--skip-freq', default=3, type=int, help='sample frequency (
 
 
 epo = 0
-# device = torch.device("cuda") if torch.cuda.is_available() else torch.device("cpu")
-device = torch.device('cpu')    # no GPU deployment on docker
+device = torch.device("cuda") if torch.cuda.is_available() else torch.device("cpu")
 
 
 def main(input_dir=None, output_dir=None, run_sequence=''):

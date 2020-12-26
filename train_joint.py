@@ -8,18 +8,18 @@ import torch
 import torch.optim
 import torch.utils.data
 
-from SfMLearnerMars.dataset import CPETDataset
-from SfMLearnerMars.models import (DispNet, PoseNet)
-from SfMLearnerMars.losses import ViewSynthesisLoss
-from SfMLearnerMars.utils import (Visualizer, compute_ate_horn, model_checkpoint, generate_curve)
+from dataset import CPETDataset
+from models import (DispNet, PoseNet)
+from losses import ViewSynthesisLoss
+from utils import (Visualizer, compute_ate_horn, model_checkpoint, generate_curve)
 
 
 # experiment settings
 parser = argparse.ArgumentParser(description="Train SfM on CPET Dataset")
 parser.add_argument('--exp-name', type=str, required=True, help='experiment name')
-parser.add_argument('--disp-net', type=str, required=True, help='path to pre-trained disparity net weights')
-parser.add_argument('--dataset-dir', type=str, default='./input', help='path to data root')
-parser.add_argument('--output-dir', type=str, default='./src/SfMLearnerMars/exp', help='experiment directory')
+parser.add_argument('--disp-net', type=str, default=None, help='path to pre-trained disparity net weights')
+parser.add_argument('--dataset-dir', type=str, required=True, help='path to data root')
+parser.add_argument('--output-dir', type=str, default='./exp', help='experiment directory')
 parser.add_argument('--seed', default=0, type=int, help='seed for random functions, and network initialization')
 
 # hyper-parameters
@@ -74,7 +74,9 @@ def main():
 
     # get models and load pre-trained disparity network
     disp_net = DispNet.DispNet(1).to(device)
-    disp_net.load_state_dict(torch.load(args.disp_net, map_location='cpu'))
+    disp_net.init_weights()
+    if args.disp_net is not None:
+        disp_net.load_state_dict(torch.load(args.disp_net, map_location='cpu'))
     disp_net.train()
     pose_net = PoseNet.PoseNet(1, args.sequence_length-1).to(device)
     pose_net.init_weights()
